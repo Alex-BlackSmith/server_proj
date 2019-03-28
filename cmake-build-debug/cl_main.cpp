@@ -18,32 +18,25 @@ using std::istream;
 using std::string;
 
 
-
-//change
-
 #define PORT "50001" // the port client will be connecting to
 #define MAXBUFFERSIZE 10000
-//ifstream buf;
+
+//istream buffer;
 char buf[MAXBUFFERSIZE];
+
 // get appropriate sockaddress, IPv4 or IPv6:
 void *get_approp_addr(struct sockaddr *sock_a);
 
-istream& operator>> (istream &file, TwoDimArray<char> &TwoDArray) {
-    unsigned len, wth;
-    file >> len >> wth;
-    TwoDimArray<char> mapLocal(len, wth);
-    TwoDArray = mapLocal;
-    string buf;
-    getline(file,buf);
-    for (auto i = 0; i < len ; i++){
-        for (auto j = 0; j <= wth; j++){
-            TwoDArray.setObjPos(i,j,file.get());
-        }
+struct membuf : std::streambuf
+{
+    membuf(char* begin, char* end) {
+        this->setg(begin, begin, end);
     }
-}
+};
 
 int main(int argc, char *argv[])
-{   TwoDimArray<char> Test; //create instance of 2DArray class
+{
+    TwoDimArray<char> Test; //create instance of 2DArray class
 
     int socket_desc, numbytes;
 
@@ -57,6 +50,7 @@ int main(int argc, char *argv[])
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
+
     while(std::cin >> ch){
     if ((getaddrinfo_code = getaddrinfo("127.0.0.1", PORT, &hints, &list_of_server_info)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(getaddrinfo_code));
@@ -93,13 +87,15 @@ int main(int argc, char *argv[])
         perror("recv");
         exit(1);
     }
-    std::stringstream ss(std::string(buf));
-    //ss >> Test;
+    //std::stringstream ss(std::string(buf));
+    membuf str_buf(buf, buf + sizeof(buf));
+
+    std::istream in(&str_buf);
+    in >> Test;
+    std::cout << Test;
     close(socket_desc);
     //buf[numbytes] = '\0';
-    //buf >> Test;
-    printf("client: received from server echo'%s'\n",buf);
-
+    //printf("client: received from server echo'%s'\n",buf);
     }
     return 0;
 }
