@@ -43,10 +43,12 @@ int main(int argc, char *argv[])
     struct addrinfo hints, *list_of_server_info, *p;
     int getaddrinfo_code;
     char address_pres[INET6_ADDRSTRLEN],ch;
+
     /*if (argc != 2) {
         fprintf(stderr,"usage: client hostname\n");
         exit(1);
     }*/
+
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -81,24 +83,24 @@ int main(int argc, char *argv[])
     freeaddrinfo(list_of_server_info); // all done with this structure
     if (send(socket_desc, &ch, 1, 0) == -1)
         perror("send");
-    //close(socket_desc);
-    //close(sockfd);
     if ((numbytes = recv(socket_desc, buf, MAXBUFFERSIZE, 0)) == -1) {
         perror("recv");
         exit(1);
     }
     //std::stringstream ss(std::string(buf));
-    membuf str_buf(buf, buf + sizeof(buf));
 
+    membuf str_buf(buf, buf + sizeof(buf));
     std::istream in(&str_buf);
     in >> Test;
     std::cout << Test;
+
     close(socket_desc);
-    //buf[numbytes] = '\0';
     //printf("client: received from server echo'%s'\n",buf);
     }
     return 0;
 }
+
+
 
 void *get_approp_addr(struct sockaddr *sock_a)
 {

@@ -43,8 +43,7 @@ int main(void)
     char buffer[size];
     file.read(buffer, size);
 
-
-
+    
     char buf[MAXBUFFERSIZE];
     int sock, new_sock,numbytes;  // listen on sock_fd, new connection on new_fd
     struct addrinfo hints, *servinfo1, *servinfo2, *p;
@@ -52,22 +51,18 @@ int main(void)
     socklen_t sin_size;
     struct sigaction sa;
     int yes=1;
-    char s[INET6_ADDRSTRLEN];
+    char address_pres[INET6_ADDRSTRLEN];
 
     int rv;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
+    
     if ((rv = getaddrinfo(NULL, PORT1, &hints, &servinfo1)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
     }
-
-    /*if ((rv = getaddrinfo(NULL, PORT2, &hints, &servinfo2)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
-    }*/
 
     // loop through all the results and bind to the first we can
     for(p = servinfo1; p != NULL; p = p->ai_next) {
@@ -114,7 +109,7 @@ int main(void)
         }
         inet_ntop(their_addr.ss_family,
                   get_approp_addr((struct sockaddr *)&their_addr),
-                  s, sizeof s);
+                  address_pres, sizeof address_pres);
         //printf("server: got connection from %s\n", s);
         if (!fork()) { // this is the child process
             close(sock); // child doesn't need the listener
