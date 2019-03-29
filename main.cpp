@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <string>
+#include <map>
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -16,12 +17,16 @@
 #include <fstream>
 #include <ostream>
 #include <vector>
+#include <libtcod.hpp>
 
 using std::ifstream;
 using std::string;
-
+using std::vector;
+using std::map;
 #define BACKLOG 10   // how many pending connections queue will hold
 #define MAXBUFFERSIZE 602
+
+void chkKeyKeyAndMovePlayer(const char& key ,vector<int>& tmpPlrPos, TwoDimArray<char>& twoDimArray);
 
 void sigchld_handler(int s)
 {
@@ -35,7 +40,16 @@ void sigchld_handler(int s)
 void *get_approp_addr(struct sockaddr *sock_a);
 
 int main(void)
-{
+{   /*TwoDimArray<char> Test;
+    const TCODColor player {0,255,0};
+    const TCODColor wall{255,0,0};
+    const TCODColor box{255,255,0};
+    const TCODColor winCross{255,255,255};
+    const vector<TCODColor> colourVec = {player, wall, box, winCross}; //0 - player, 1 - wall, 2 - box, 3 - winCross
+    vector<int> tempPlrPos; //temporary player position vector (x,y)
+    map<vector<int>,char> mapCharWin; // vector of win positions "(x,y) - character"
+    */
+
     ifstream in("TestMap.txt");
     std::ifstream file("TestMap.txt", std::ios::binary | std::ios::ate);
     std::streamsize size = file.tellg();
@@ -43,7 +57,7 @@ int main(void)
     char buffer[size];
     file.read(buffer, size);
 
-    
+
     char buf[MAXBUFFERSIZE];
     int sock, new_sock,numbytes;  // listen on sock_fd, new connection on new_fd
     struct addrinfo hints, *servinfo1, *servinfo2, *p;
@@ -52,13 +66,15 @@ int main(void)
     struct sigaction sa;
     int yes=1;
     char address_pres[INET6_ADDRSTRLEN];
+    bool isMapSent = false;
+    bool *isMapSentPtr = &isMapSent;
 
     int rv;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
-    
+
     if ((rv = getaddrinfo(NULL, PORT1, &hints, &servinfo1)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
@@ -119,10 +135,23 @@ int main(void)
                 perror("recv");
                 exit(1);
             }
-            if (send(new_sock, buffer, size, 0) == -1)
-                perror("send");
-            printf("server: received '%s'\n",buf);
+            if (*buf == 'm' && !isMapSent) {
+                if (send(new_sock, buffer, size, 0) == -1){
+                    perror("send");
+                }
+                else {
+                    *isMapSentPtr = true;
+                }
+            }
+            if(((*buf == 'w') || (*buf == 'a')
+            || (*buf == 's') || (*buf == 'd'))) {
+                //chkKeyKeyAndMovePlayer(*buf, tempPlrPos, Test);
+
+                printf("server: received '%s'\n", buf);
+
+            }
             exit(0);
+
         }
         close(new_sock);  // parent doesn't need this
     }
@@ -136,3 +165,125 @@ void *get_approp_addr(struct sockaddr *sock_a)
     }
     return &(((struct sockaddr_in6*)sock_a)->sin6_addr);
 }
+
+
+/*void chkKeyKeyAndMovePlayer(const char& key ,vector<int>& tmpPlrPos, TwoDimArray<char>& twoDimArray){
+    //TCOD_key_t key = TCODConsole::checkForKeypress();
+    //TCODConsole::root->flush();
+    if ( key == 'w' || key == 'W' ) {
+        if (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] - 1) != '#'){
+            if (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] - 1) != 'B'){
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1] - 1, 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1] - 1,colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                tmpPlrPos = {tmpPlrPos[0], tmpPlrPos[1] - 1};
+            }
+            else if ((twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] - 1) == 'B')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] - 2) != '#')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] - 2) != 'B')){
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1] - 1, 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1] - 1,colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1] - 2, 'B');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1] - 2,colVec[2]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                tmpPlrPos = {tmpPlrPos[0], tmpPlrPos[1] - 1};
+            }
+        }
+        TCODConsole::root->flush();
+    }
+    else if ( key == 'a' || key == 'A' ) {
+        if (twoDimArray.getObjPos(tmpPlrPos[0] - 1, tmpPlrPos[1]) != '#'){
+            if (twoDimArray.getObjPos(tmpPlrPos[0] - 1, tmpPlrPos[1]) != 'B'){
+                twoDimArray.setObjPos(tmpPlrPos[0] - 1, tmpPlrPos[1], 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0] - 1, tmpPlrPos[1],colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                tmpPlrPos = {tmpPlrPos[0] - 1, tmpPlrPos[1]};
+            }
+
+            else if ((twoDimArray.getObjPos(tmpPlrPos[0] - 1, tmpPlrPos[1]) == 'B')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0] - 2, tmpPlrPos[1]) != '#')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0] - 2, tmpPlrPos[1]) != 'B')){
+                twoDimArray.setObjPos(tmpPlrPos[0] - 1, tmpPlrPos[1], 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0] - 1, tmpPlrPos[1],colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                twoDimArray.setObjPos(tmpPlrPos[0] - 2, tmpPlrPos[1], 'B');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0] - 2, tmpPlrPos[1],colVec[2]);
+                tmpPlrPos = {tmpPlrPos[0] - 1, tmpPlrPos[1]};
+            }
+        }
+        TCODConsole::root->flush();
+    }
+    else if ( key == 's' || key == 'S' ) {
+        if (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] + 1) != '#'){
+            if (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] + 1) != 'B'){
+                twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] + 1, 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1] + 1,colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                tmpPlrPos = {tmpPlrPos[0], tmpPlrPos[1] + 1};
+            }
+            else if ((twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] + 1) == 'B')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] + 2) != '#')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0], tmpPlrPos[1] + 2) != 'B')){
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1] + 1, 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1] + 1,colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1] + 2, 'B');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1] + 2,colVec[2]);
+                tmpPlrPos = {tmpPlrPos[0], tmpPlrPos[1] + 1};
+            }
+        }
+        TCODConsole::root->flush();
+    }
+    else if ( key == 'd' || key == 'D' ) {
+        if (twoDimArray.getObjPos(tmpPlrPos[0] + 1, tmpPlrPos[1]) != '#'){
+            if (twoDimArray.getObjPos(tmpPlrPos[0] + 1, tmpPlrPos[1]) != 'B'){
+                twoDimArray.getObjPos(tmpPlrPos[0] + 1, tmpPlrPos[1], 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0] + 1, tmpPlrPos[1],colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                tmpPlrPos = {tmpPlrPos[0] + 1, tmpPlrPos[1]};
+            }
+
+            else if ((twoDimArray.getObjPos(tmpPlrPos[0] + 1, tmpPlrPos[1]) == 'B')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0] + 2, tmpPlrPos[1]) != '#')
+                     && (twoDimArray.getObjPos(tmpPlrPos[0] + 2, tmpPlrPos[1]) != 'B')){
+                twoDimArray.setObjPos(tmpPlrPos[0] + 1, tmpPlrPos[1], 'P');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0] + 1, tmpPlrPos[1],colVec[0]);
+                twoDimArray.setObjPos(tmpPlrPos[0], tmpPlrPos[1], ' ');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0], tmpPlrPos[1],{0,0,0});
+                twoDimArray.setObjPos(tmpPlrPos[0] + 2, tmpPlrPos[1], 'B');
+                //TCODConsole::root->setCharBackground(tmpPlrPos[0] + 2, tmpPlrPos[1],colVec[2]);
+
+                tmpPlrPos = {tmpPlrPos[0] + 1, tmpPlrPos[1]};
+            }
+        }
+    }
+}
+
+void firstFeel(TwoDimArray<char>& twoDArray, vector<int>& tmpPlrPos, map<vector<int>,char>& mapOfWinPositions){
+
+    for (auto i = 0; i < twoDArray.getDimY(); i++){
+        for (auto j = 0; j < twoDArray.getDimX(); j++){
+
+            if (twoDArray.getObjPos(i,j) == 'P'){
+                tmpPlrPos = {j,i};
+            }
+            else if (twoDArray.getObjPos(i,j) == '#'){
+
+            }
+            else if (twoDArray.getObjPos(i,j) == 'B'){
+
+
+            }
+            else if (twoDArray.getObjPos(i,j) == 'X'){
+                mapOfWinPositions[{j,i}] = 'X';
+            }
+        }
+    }
+}*/

@@ -4,9 +4,8 @@
 
 #ifndef SOKOBAN_PROJ_TWODIMARRAY_H
 #define SOKOBAN_PROJ_TWODIMARRAY_H
-
 #include <iostream>
-//#include <libtcod.h>
+#include <libtcod.h>
 #include <ostream>
 #include <string>
 
@@ -43,10 +42,7 @@ public:
     unsigned  getDimY() const {
         return length;
     }
-    TwoDimArray getArray(){
 
-        return value;
-    }
     friend ostream& operator<< (ostream& stream, TwoDimArray<char>& TwoDArray);
     friend istream& operator>> (istream &file, TwoDimArray<char>& TwoDArray);
 
